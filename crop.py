@@ -1,16 +1,40 @@
 import cv2
 import numpy as np
 
-def crop_polygon(image, points):
+def crop_polygon(image, points, return_mask_data=False):
+    """
+    Crops an image using a polygon.
+    If return_mask_data=True, returns (roi, local_mask, x, y, w, h) for optimized looping.
+    Otherwise, returns just the cropped ROI image.
+    """
     if len(points) < 3:
-        return np.zeros_like(image)
+        blank = np.zeros_like(image)
+        return (blank, None, 0, 0, 0, 0) if return_mask_data else blank
     
-    mask = np.zeros(image.shape[:2], dtype=np.uint8)
     pts = np.array([points], dtype=np.int32)
-    cv2.fillPoly(mask, pts, 255)
-    masked = cv2.bitwise_and(image, image, mask=mask)
     x, y, w, h = cv2.boundingRect(pts)
-    return masked[y:y+h, x:x+w] if w > 0 and h > 0 else masked
+    
+    if w <= 0 or h <= 0:
+        blank = np.zeros_like(image)
+        return (blank, None, 0, 0, 0, 0) if return_mask_data else blank
+
+    local_mask = np.zeros((h, w), dtype=np.uint8)
+    # Shift polygon points to match the new cropped coordinate space
+    shifted_pts = pts - [x, y]
+    cv2.fillPoly(local_mask, shifted_pts, 255)
+
+    roi = image[y:y+h, x:x+w]
+    
+    if len(roi.shape) == 3: # Color
+        mask_3ch = cv2.merge([local_mask] * 3)
+        cropped_roi = cv2.bitwise_and(roi, mask_3ch)
+    else: # Grayscale
+        cropped_roi = cv2.bitwise_and(roi, roi, mask=local_mask)
+
+    if return_mask_data:
+        return cropped_roi, local_mask, x, y, w, h
+    
+    return cropped_roi
 
 def select_points(image):
     print("""Selecione os pontos.
