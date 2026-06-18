@@ -71,9 +71,9 @@ def validate_ranges(video_path):
 
         print(f"Reviewing range: [{start}, {end}] - ", end="")
         if review_mode == "auto":
-            print("Press 'z' to validate, 'x' to skip, 'ESC' to exit, 's' to switch to manual.")
+            print("Press UP to validate, DOWN to skip, LEFT/RIGHT to step (manual), SPACE to pause (manual), ESC to exit.")
         elif review_mode == "manual":
-            print("Press 'z' to validate, 'x' to skip, 'ESC' to exit, 'a' to go back, 'd' to go forward, 'space' to split, 's' to switch to auto.")
+            print("Press UP to validate until current frame, DOWN to skip until current frame, LEFT/RIGHT to step, SPACE to resume (auto), ESC to exit.")
 
         cap.set(cv2.CAP_PROP_POS_FRAMES, start)
         current_frame = start
@@ -104,43 +104,64 @@ def validate_ranges(video_path):
 
             cv2.imshow('Frame', frame)
 
-            key = cv2.waitKey(speed if review_mode == "auto" else 0) & 0xFF
+            key_code = cv2.waitKeyEx(speed if review_mode == "auto" else 0)
+            key_ascii = key_code & 0xFF if key_code != -1 else -1
 
-            if key == ord('z'):
-                validated_ranges.append([start, end])
-                print(f"✅ Validated range: [{start}, {end}]")
-                break
-            elif key == ord('x'):
-                print(f"❌ Skipped range: [{start}, {end}]")
-                break
-            elif key == 27:  # ESC key
+            # Define arrow key codes (handling standard waitKeyEx and platform specific keysyms)
+            LEFT_KEYS = [2424832, 0x250000, 65361]
+            RIGHT_KEYS = [2555904, 0x270000, 65363]
+            UP_KEYS = [2490368, 0x260000, 65362]
+            DOWN_KEYS = [2621440, 0x280000, 65364]
+
+            if key_code in LEFT_KEYS:
+                if review_mode == "auto":
+                    review_mode = "manual"
+                    print("Switched to manual review mode.")
+                current_frame = max(start, current_frame - manual_step)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in RIGHT_KEYS:
+                if review_mode == "auto":
+                    review_mode = "manual"
+                    print("Switched to manual review mode.")
+                current_frame = min(end, current_frame + manual_step)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in UP_KEYS:
+                if review_mode == "manual" and current_frame < end:
+                    validated_ranges.append([start, current_frame])
+                    print(f"✅ Validated split range: [{start}, {current_frame}]")
+                    # Update current range to the remaining part and switch to auto
+                    frame_ranges[current_range_index] = [current_frame + 1, end]
+                    start = current_frame + 1
+                    current_frame = start
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, start)
+                    range_length = end - start + 1
+                    review_mode = "auto"
+                    print("Switched to auto review mode.")
+                else:
+                    validated_ranges.append([start, end])
+                    print(f"✅ Validated range: [{start}, {end}]")
+                    break
+            elif key_code in DOWN_KEYS:
+                if review_mode == "manual" and current_frame < end:
+                    print(f"❌ Skipped split range: [{start}, {current_frame}]")
+                    # Update current range to the remaining part and switch to auto
+                    frame_ranges[current_range_index] = [current_frame + 1, end]
+                    start = current_frame + 1
+                    current_frame = start
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, start)
+                    range_length = end - start + 1
+                    review_mode = "auto"
+                    print("Switched to auto review mode.")
+                else:
+                    print(f"❌ Skipped range: [{start}, {end}]")
+                    break
+            elif key_ascii == 27:  # ESC key
                 early_exit = True
                 save_progress(save_path, frame_ranges, validated_ranges, current_range_index)
                 break
-            elif key == ord('s'):
+            elif key_ascii == ord(' '):  # Space
                 review_mode = "auto" if review_mode == "manual" else "manual"
                 print(f"Switched to {review_mode} review mode.")
-                print("Press 'd' to go forward, 'a' to go back, 'space' to split, 's' to switch to auto.")
-            elif review_mode == "manual":
-                if key == ord('a'):
-                    current_frame = max(start, current_frame - manual_step)
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
-                elif key == ord('d'):
-                    current_frame = min(end, current_frame + manual_step)
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
-                elif key == ord(' '):
-                    if start < current_frame < end:
-                        new_range1 = [start, current_frame]
-                        new_range2 = [current_frame + 1, end]
-                        frame_ranges[current_range_index] = new_range1
-                        frame_ranges.insert(current_range_index + 1, new_range2)
-                        print(f"✂️ Split range [{start}, {end}] into [{new_range1[0]}, {new_range1[1]}] and [{new_range2[0]}, {new_range2[1]}].")
-                        end = current_frame
-                        # print(frame_ranges)
-                        review_mode = "auto"
-                    else:
-                        print("Cannot split at the boundary.")
-
             elif review_mode == "auto":
                 current_frame += 1
 
@@ -156,7 +177,7 @@ def validate_ranges(video_path):
     if current_range_index == len(frame_ranges):
         save_progress(save_path, frame_ranges, validated_ranges, current_range_index, True)
         print("🎉 All work is done!")
-        save = input("Save now? y/n ")
+        save = input("Save now? y/n: ")
         if save == "y":
             save_frames(video_path)
 
