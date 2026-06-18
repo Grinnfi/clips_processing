@@ -17,12 +17,20 @@ def get_mask_volume(mask_points, shape):
     mask_volume = np.sum(mask)
     return mask_volume
 
+from tqdm import tqdm
+
 def get_movement(cap, skip_frames, mask_points):
     #cap.set(cv2.CAP_PROP_POS_FRAMES, 0)#inicio
     ret, frame = cap.retrieve()
     mask_volume = get_mask_volume(mask_points, frame.shape[:2])
     frame = crop_polygon(gray(frame), mask_points)
     movement_list = []
+    
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    total_steps = frame_count // (skip_frames + 1)
+        
+    pbar = tqdm(total=total_steps, desc="Processando movimento", unit="frame")
+    
     while True:
         last_frame = frame
         for _ in range(skip_frames):
@@ -37,5 +45,7 @@ def get_movement(cap, skip_frames, mask_points):
         frame = crop_polygon(gray(frame), mask_points)
         
         movement_list.append(int((np.sum(get_diff(frame, last_frame))/mask_volume)*100000))
+        pbar.update(1)
 
+    pbar.close()
     return movement_list
