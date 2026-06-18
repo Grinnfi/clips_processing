@@ -8,7 +8,7 @@ def process_clip(clip_path):
     movement_path = process_movement(clip_path)
     print("Processing Ranges.")
     process_ranges(movement_path)
-    validate = input("Validate clip now? (y/n)").lower()
+    validate = input("Validate clip now? (y/n): ").lower()
     if validate == "y":
         validate_ranges(clip_path)
 

@@ -20,7 +20,9 @@ def save_plot(folder_path):
 
     with open("options.json", "r") as f:
         options = json.load(f)
-        h_lines = [options["low_threshold"], options["high_threshold"]]
+        h_lines = [options.get("low_threshold", 0)]
+        if options.get("high_threshold") is not None:
+            h_lines.append(options.get("high_threshold"))
         skip_frames = options["skip_frames"]
         jump_seconds = options["jump_seconds"]
         y_limit = options["y_limit"]

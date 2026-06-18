@@ -16,7 +16,8 @@ Hiperparametros e outras opções em options.json.
 
 Processamento:
 "skip_frames": Quantidade de frames pulados ao gerar a diferença entre cada frame para análise.
-"high_threshold" e "low_threshold": Ranges de moviemtno considerados válidos (normalizados de acordo com área do crop).
+"low_threshold": Limiar mínimo de movimento considerado válido (normalizado de acordo com a área do crop).
+"high_threshold" (opcional): Limiar máximo de movimento considerado válido (se omitido ou null, nenhum limite superior é aplicado).
 "window_size": Tamanho da janela usada para checar pontos de mudança nos dados de movimento.
 "change_point_threshold": Porcentagem a se considerar como ponto de mudança (média da janela vs valor atual).
 

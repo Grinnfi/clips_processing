@@ -52,17 +52,20 @@ def process_ranges(data_path):
         options = json.load(f)
 
     skip_frames = options["skip_frames"]
-    low_threshold = options["low_threshold"]
-    high_threshold = options["high_threshold"]
-    change_point_threshold = options["change_point_threshold"]
-    window_size = options["window_size"]
+    low_threshold = options.get("low_threshold", 0)
+    high_threshold = options.get("high_threshold", None)
+    change_point_threshold = options.get("change_point_threshold", 0.3)
+    window_size = options.get("window_size", 12)
     
     # Ensure data is a NumPy array
     if not isinstance(data, np.ndarray):
         data = np.asarray(data)
 
     # Find indices where movement is within the threshold limits
-    active_indices = np.where((data >= low_threshold) & (data <= high_threshold))[0]
+    if high_threshold is not None:
+        active_indices = np.where((data >= low_threshold) & (data <= high_threshold))[0]
+    else:
+        active_indices = np.where(data >= low_threshold)[0]
     
     clean_data = []
     if len(active_indices) > 0:
