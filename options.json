@@ -1,10 +1,12 @@
 {
-    "change_point_threshold": 0.3,
-    "window_size": 12,
-    "low_threshold": 2,
+    "min_group_size": 20,
+    "low_threshold": 250,
     "high_threshold": null,
-    "skip_frames": 3,
-    "skip_frames_save": 5,
-    "jump_seconds": 5,
-    "y_limit": []
+    "skip_frames": 5,
+    "skip_frames_save": 60,
+    "jump_seconds": 10,
+    "y_limit": [
+        200,
+        4000
+    ]
 }

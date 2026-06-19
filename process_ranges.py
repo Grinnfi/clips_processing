@@ -6,57 +6,17 @@ from plot import save_plot
 
 import numpy as np
 
-def detect_changes_point(time_series, window_size, threshold):
-    """
-    Detects abrupt changes in a time series by comparing the window mean to the current value.
-    Uses NumPy for calculations and returns integer indices.
-
-    Args:
-        time_series (np.ndarray): The input time series as a NumPy array.
-        window_size (int): The size of the moving window.
-        threshold (float): The maximum allowed percentage change.
-
-    Returns:
-        list: A list of integer indices where abrupt changes were detected.
-    """
-    abrupt_change_indices = []
-    
-    # Ensure time_series is a NumPy array
-    if not isinstance(time_series, np.ndarray):
-        time_series = np.asarray(time_series)
-
-    # We start the loop from window_size because we need at least 'window_size'
-    # elements before the current element to form the first window.
-    for i in range(window_size, len(time_series)):
-        current_value = time_series[i]
-        
-        # Define the window using NumPy slicing
-        window = time_series[i - window_size : i]
-        window_mean = np.mean(window)
-
-        if current_value == 0 or window_mean == 0:  # Avoid division by zero
-            continue # Move to the next iteration
-
-        percentage_change = np.abs((current_value - window_mean) / window_mean)
-
-        if percentage_change > threshold:
-            # print(f"id {i}: %: {percentage_change} v: {current_value}  w:{window}")
-            abrupt_change_indices.append(i)
-
-    return abrupt_change_indices
-
 def process_ranges(data_path):
     with open (data_path, 'rb') as f:
         data = pickle.load(f)
     with open ("options.json", "r") as f:
         options = json.load(f)
 
-    skip_frames = options["skip_frames"]
+    skip_frames = options.get("skip_frames")
     low_threshold = options.get("low_threshold", 0)
     high_threshold = options.get("high_threshold", None)
-    change_point_threshold = options.get("change_point_threshold", 0.3)
-    window_size = options.get("window_size", 12)
-    
+    min_group_size = options.get("min_group_size", 10) 
+
     # Ensure data is a NumPy array
     if not isinstance(data, np.ndarray):
         data = np.asarray(data)
@@ -66,21 +26,62 @@ def process_ranges(data_path):
         active_indices = np.where((data >= low_threshold) & (data <= high_threshold))[0]
     else:
         active_indices = np.where(data >= low_threshold)[0]
-    
+       
     clean_data = []
+    
     if len(active_indices) > 0:
-        # Group contiguous active indices, allowing a gap of up to split_gap (e.g., 3 points)
-        # This merges close spikes but splits them if there's a longer period of no movement
-        split_gap = 3
+        # Step 1: Find completely raw, contiguous blocks (no split_gap applied yet)
+        raw_groups = []
         start = active_indices[0]
         prev = active_indices[0]
         
         for idx in active_indices[1:]:
-            if idx - prev > split_gap:
-                clean_data.append((start, prev))
+            if idx - prev > 1:  # Strict contiguity
+                raw_groups.append([start, prev])
                 start = idx
             prev = idx
-        clean_data.append((start, prev))
+        raw_groups.append([start, prev])
+        
+        # Step 2: Conditionally merge small groups across a split_gap
+        split_gap = 3
+        merged_groups = []
+        
+        i = 0
+        while i < len(raw_groups):
+            curr_start, curr_end = raw_groups[i]
+            curr_size = curr_end - curr_start + 1
+            
+            # If this group is already large enough, keep it independently
+            if curr_size >= min_group_size:
+                merged_groups.append((curr_start, curr_end))
+                i += 1
+                continue
+            
+            # If it's too small, look ahead to see if we can bridge gaps to save it
+            while i < len(raw_groups) - 1:
+                next_start, next_end = raw_groups[i + 1]
+                gap = next_start - curr_end
+                
+                # Can we bridge the gap to the next group?
+                if gap <= split_gap:
+                    curr_end = next_end  # Merge them
+                    curr_size = curr_end - curr_start + 1
+                    i += 1
+                    
+                    # If the combined group now passes the threshold, stop merging
+                    if curr_size >= min_group_size:
+                        break
+                else:
+                    # Next group is too far away to merge
+                    break
+            
+            # Only keep the final merged group if it successfully passed the min check
+            if curr_size >= min_group_size:
+                merged_groups.append((curr_start, curr_end))
+                
+            i += 1
+            
+        clean_data = merged_groups
 
     # Convert to video frame ranges taking skip_frames into account
     frame_ranges = [[int(r[0]*(skip_frames+1)), int(r[1]*(skip_frames+1) + skip_frames)] for r in clean_data]
