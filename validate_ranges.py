@@ -54,11 +54,11 @@ def validate_ranges(video_path):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     # fps = cap.get(cv2.CAP_PROP_FPS)
 
-    speed = 5
+    speed = 8 # Milliseconds between frames in auto mode
     manual_step = 1
+    manual_step_large = 20
     review_mode = "auto"  # Can be "auto" or "manual"
     early_exit = False
-    # print(frame_ranges)
 
     while current_range_index < len(frame_ranges) and not early_exit:
         start, end = frame_ranges[current_range_index]
@@ -86,9 +86,9 @@ def validate_ranges(video_path):
             if current_frame > end and review_mode == "auto":
                 current_frame = start
                 cap.set(cv2.CAP_PROP_POS_FRAMES, start)
-            elif current_frame < start and review_mode == "manual":
-                current_frame = start
-                cap.set(cv2.CAP_PROP_POS_FRAMES, start)
+            # elif current_frame < start and review_mode == "manual":
+            #     current_frame = start
+            #     cap.set(cv2.CAP_PROP_POS_FRAMES, start)
 
             ret, frame = cap.read()
             if not ret:
@@ -106,32 +106,37 @@ def validate_ranges(video_path):
 
             key_code = cv2.waitKeyEx(speed if review_mode == "auto" else 0)
             key_ascii = key_code & 0xFF if key_code != -1 else -1
+            # print(f"Key pressed: {key_code} (ASCII: {key_ascii})")  # Debug print for key codes
 
             # Define arrow key codes (handling standard waitKeyEx and platform specific keysyms)
             LEFT_KEYS = [2424832, 0x250000, 65361]
             RIGHT_KEYS = [2555904, 0x270000, 65363]
             UP_KEYS = [2490368, 0x260000, 65362]
             DOWN_KEYS = [2621440, 0x280000, 65364]
+            # Page up/down and Home/End keys (several platform variants)
+            PAGE_UP_KEYS = [2162688, 0x210000, 65365]
+            PAGE_DOWN_KEYS = [2228224, 0x220000, 65366]
+            HOME_KEYS = [2359296, 0x240000, 65360]
+            END_KEYS = [2293760, 0x2b0000, 65367]
 
-            if key_code in LEFT_KEYS:
-                if review_mode == "auto":
-                    review_mode = "manual"
-                    print("Switched to manual review mode.")
-                current_frame = max(start, current_frame - manual_step)
-                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
-            elif key_code in RIGHT_KEYS:
-                if review_mode == "auto":
-                    review_mode = "manual"
-                    print("Switched to manual review mode.")
-                current_frame = min(end, current_frame + manual_step)
-                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
-            elif key_code in UP_KEYS:
+            # Determine adjacent-range clamps for stepping/jumping
+            prev_end = frame_ranges[current_range_index - 1][1] if current_range_index > 0 else 0
+            next_start = frame_ranges[current_range_index + 1][0] if current_range_index < len(frame_ranges) - 1 else total_frames - 1
+            # Allow stepping to at most the previous range end (min) and next range start (max)
+            step_min = prev_end
+            step_max = next_start
+
+            if key_code in UP_KEYS:
                 if review_mode == "manual" and current_frame < end:
-                    validated_ranges.append([start, current_frame])
-                    print(f"✅ Validated split range: [{start}, {current_frame}]")
-                    # Update current range to the remaining part and switch to auto
-                    frame_ranges[current_range_index] = [current_frame + 1, end]
-                    start = current_frame + 1
+                    actual_start = min(start, current_frame)
+                    actual_end = max(start, current_frame)
+                    
+                    validated_ranges.append([actual_start, actual_end])
+                    print(f"✅ Validated split range: [{actual_start}, {actual_end}]")
+                    
+                    # Move the next start point safely to the frame right after our max boundary
+                    start = actual_end + 1
+                    frame_ranges[current_range_index] = [start, end]
                     current_frame = start
                     cap.set(cv2.CAP_PROP_POS_FRAMES, start)
                     range_length = end - start + 1
@@ -143,10 +148,13 @@ def validate_ranges(video_path):
                     break
             elif key_code in DOWN_KEYS:
                 if review_mode == "manual" and current_frame < end:
-                    print(f"❌ Skipped split range: [{start}, {current_frame}]")
-                    # Update current range to the remaining part and switch to auto
-                    frame_ranges[current_range_index] = [current_frame + 1, end]
-                    start = current_frame + 1
+                    actual_start = min(start, current_frame)
+                    actual_end = max(start, current_frame)
+                    
+                    print(f"❌ Skipped split range: [{actual_start}, {actual_end}]")
+                    
+                    start = actual_end + 1
+                    frame_ranges[current_range_index] = [start, end]
                     current_frame = start
                     cap.set(cv2.CAP_PROP_POS_FRAMES, start)
                     range_length = end - start + 1
@@ -155,6 +163,42 @@ def validate_ranges(video_path):
                 else:
                     print(f"❌ Skipped range: [{start}, {end}]")
                     break
+            elif key_code in LEFT_KEYS:
+                if review_mode == "auto":
+                    review_mode = "manual"
+                # Step backward
+                current_frame = max(step_min, current_frame - manual_step)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in RIGHT_KEYS:
+                if review_mode == "auto":
+                    review_mode = "manual"
+                # Step forward
+                current_frame = min(step_max, current_frame + manual_step)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in PAGE_UP_KEYS:
+                # Jump forward
+                if review_mode == "auto":
+                    review_mode = "manual"
+                current_frame = min(step_max, current_frame + manual_step_large)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in PAGE_DOWN_KEYS:
+                # Jump backward
+                if review_mode == "auto":
+                    review_mode = "manual"
+                current_frame = max(step_min, current_frame - manual_step_large)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in HOME_KEYS:
+                # Go to start of the current range
+                if review_mode == "auto":
+                    review_mode = "manual"
+                current_frame = start
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in END_KEYS:
+                # Go to end of the current range
+                if review_mode == "auto":
+                    review_mode = "manual"
+                current_frame = end
+                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
             elif key_ascii == 27:  # ESC key
                 early_exit = True
                 save_progress(save_path, frame_ranges, validated_ranges, current_range_index)
