@@ -164,39 +164,33 @@ def validate_ranges(video_path, output_path=None):
                     print(f"❌ Skipped range: [{start}, {end}]")
                     break
             elif key_code in LEFT_KEYS:
-                if review_mode == "auto":
-                    review_mode = "manual"
+                review_mode = "manual"
                 # Step backward
                 current_frame = max(step_min, current_frame - manual_step)
                 cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
             elif key_code in RIGHT_KEYS:
-                if review_mode == "auto":
-                    review_mode = "manual"
+                review_mode = "manual"
                 # Step forward
                 current_frame = min(step_max, current_frame + manual_step)
                 cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
             elif key_code in PAGE_UP_KEYS:
                 # Jump forward
-                if review_mode == "auto":
-                    review_mode = "manual"
+                review_mode = "manual"
                 current_frame = min(step_max, current_frame + manual_step_large)
                 cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
             elif key_code in PAGE_DOWN_KEYS:
                 # Jump backward
-                if review_mode == "auto":
-                    review_mode = "manual"
+                review_mode = "manual"
                 current_frame = max(step_min, current_frame - manual_step_large)
                 cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
             elif key_code in HOME_KEYS:
                 # Go to start of the current range
-                if review_mode == "auto":
-                    review_mode = "manual"
+                review_mode = "manual"
                 current_frame = start
                 cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
             elif key_code in END_KEYS:
                 # Go to end of the current range
-                if review_mode == "auto":
-                    review_mode = "manual"
+                review_mode = "manual"
                 current_frame = end
                 cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
             elif key_ascii == 27:  # ESC key
