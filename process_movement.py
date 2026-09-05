@@ -24,11 +24,11 @@ def get_points(processed_path, frame):
     
     return mask_points
 
-def process_movement(video_path):
+def process_movement(video_path, output_path=None):
     cap = cv2.VideoCapture(video_path)
 
     # path/{file}_processed
-    processed_folder = create_processed_folder(video_path)
+    processed_folder = create_processed_folder(video_path, output_path=output_path)
 
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -67,5 +67,10 @@ def process_movement(video_path):
     return movement_path
 
 if __name__ == "__main__":
-    video_path = sys.argv[-1]
-    process_movement(video_path)
+    import argparse
+    parser = argparse.ArgumentParser(description="Process video movement.")
+    parser.add_argument("video_path", help="Path to input video file")
+    parser.add_argument("output_path", nargs="?", default=None, help="Optional output path or directory name")
+    args = parser.parse_args()
+
+    process_movement(args.video_path, output_path=args.output_path)

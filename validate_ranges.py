@@ -26,10 +26,10 @@ def save_progress(save_path, frame_ranges, validated_ranges, current_range_index
     print(f"💾 Progress saved to {save_path}")
 
 
-def validate_ranges(video_path):
+def validate_ranges(video_path, output_path=None):
     cap = cv2.VideoCapture(video_path)
 
-    processed_path = create_processed_folder(video_path)
+    processed_path = create_processed_folder(video_path, output_path=output_path)
     save_path = os.path.join(processed_path, "video_review_progress.json")
 
     with open(os.path.join(processed_path, "ranges.pkl"), "rb") as f:
@@ -223,11 +223,16 @@ def validate_ranges(video_path):
         print("🎉 All work is done!")
         save = input("Save now? y/n: ")
         if save == "y":
-            save_frames(video_path)
+            save_frames(video_path, output_path=output_path)
 
     # print("\nValidated Ranges:", validated_ranges)
     # print("Total Ranges:", frame_ranges)
 
 if __name__ == "__main__":
-    video_path = sys.argv[-1]
-    validate_ranges(video_path)
+    import argparse
+    parser = argparse.ArgumentParser(description="Validate movement ranges for a clip.")
+    parser.add_argument("video_path", help="Path to input video file")
+    parser.add_argument("output_path", nargs="?", default=None, help="Optional output path or directory name")
+    args = parser.parse_args()
+
+    validate_ranges(args.video_path, output_path=args.output_path)

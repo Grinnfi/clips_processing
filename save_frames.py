@@ -32,8 +32,8 @@ def get_crop_coords(folder_path):
     y_max = max(y_coords)
     return x_min, x_max, y_min, y_max
 
-def save_frames(video_path, crop=False):
-    processed_folder = create_processed_folder(video_path)
+def save_frames(video_path, crop=False, output_path=None):
+    processed_folder = create_processed_folder(video_path, output_path=output_path)
     review_path = os.path.join(processed_folder, "video_review_progress.json")
     save_folder = os.path.join(processed_folder, "frames")
     if not os.path.exists(save_folder):
@@ -66,5 +66,11 @@ def save_frames(video_path, crop=False):
 
 
 if __name__ == "__main__":
-    video_path = sys.argv[-1]
-    save_frames(video_path)
+    import argparse
+    parser = argparse.ArgumentParser(description="Save processed video frames.")
+    parser.add_argument("video_path", help="Path to input video file")
+    parser.add_argument("output_path", nargs="?", default=None, help="Optional output path or directory name")
+    parser.add_argument("--crop", action="store_true", help="Crop saved frames using ROI points")
+    args = parser.parse_args()
+
+    save_frames(args.video_path, crop=args.crop, output_path=args.output_path)
