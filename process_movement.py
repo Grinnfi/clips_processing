@@ -34,7 +34,10 @@ def process_movement(video_path, output_path=None):
     fps = cap.get(cv2.CAP_PROP_FPS)
 
     with open ("options.json", "r") as f:
-        skip_frames = json.load(f)["skip_frames"]
+        options = json.load(f)
+    
+    skip_frames = options.get("skip_frames")
+    movement_method = options.get("movement_method")
 
     if not cap.grab():
         return('Erro ao ler o video.')
@@ -44,9 +47,9 @@ def process_movement(video_path, output_path=None):
     print('Requisitando pontos')
     mask_points = get_points(processed_folder, frame)
 
-    print('Criando lista de movimento')
+    print(f'Criando lista de movimento usando {movement_method}')
     start_time = time.time()
-    movement_list = get_movement(cap, skip_frames, mask_points)
+    movement_list = get_movement(cap, skip_frames, mask_points, movement_method)
     end_time = time.time()
     execution_time = end_time - start_time
     print(f'Finalizado em {execution_time} segundos.')

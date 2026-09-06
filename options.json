@@ -8,5 +8,6 @@
     "y_limit": [
         200,
         4000
-    ]
+    ],
+    "movement_method": "absdiff"
 }
