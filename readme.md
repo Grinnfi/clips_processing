@@ -70,6 +70,9 @@ A interface de validação (`validate_ranges.py`) foi desenhada para ser rápida
 * **Seta para BAIXO (↓):**
   - **No Modo Auto (looping):** Ignora e descarta o intervalo inteiro atual, avançando para o próximo.
   - **No Modo Manual:** Descarta o intervalo do *início do range até o frame atual*. O restante do range vira um novo trecho e a visualização volta automaticamente para o **Modo Auto**.
+* **Brackets []:**
+  - **Aberto [ :** Aumenta a velocidade do loop no modo automático
+  - **Fechado [ :** Diminui a velocidade do loop no modo automático
 * **ESC:**
   - Salva o progresso atual no arquivo `video_review_progress.json` e encerra o programa antecipadamente.
 
@@ -84,6 +87,7 @@ Edite o arquivo `options.json` para ajustar o comportamento da extração e segm
 * `"low_threshold"`: Limiar de movimento mínimo para que o frame seja considerado ativo (normalizado com base na área da máscara de seleção).
 * `"high_threshold"` (opcional): Limiar máximo de movimento considerado válido. Se for `null` ou omitido, nenhum limite superior é aplicado.
 * `"skip_frames_save"`: Quantidade de frames pulados ao gerar os arquivos de imagem finais em `save_frames.py` (ex: salvar a cada 5 frames).
+* `"movement_method"`: Método usado para detectar o movimento (`absdiff` - Diferença absoluta ou `mog2` - Mixture of Gaussians 2)
 
 ### Plot & Visualização:
 * `"jump_seconds"`: Define o intervalo em segundos entre os marcadores do eixo X no plot `movement.png`.
