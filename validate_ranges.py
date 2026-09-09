@@ -19,6 +19,8 @@ PAGE_UP_KEYS = [2162688, 0x210000, 65365]
 PAGE_DOWN_KEYS = [2228224, 0x220000, 65366]
 HOME_KEYS = [2359296, 0x240000, 65360]
 END_KEYS = [2293760, 0x2b0000, 65367]
+CLOSED_BRACKETS = [93, 125, 41]  # ']', '}', ')'
+OPEN_BRACKETS = [91, 123, 40]  # '[', '{', '('
 
 def load_progress(save_path):
     with open(save_path, 'r') as f:
@@ -190,6 +192,12 @@ def validate_ranges(video_path, output_path=None):
                 review_mode = "manual"
                 current_frame = end
                 cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+            elif key_code in OPEN_BRACKETS:
+                speed -= 100
+                print(f"Speed decreased to {speed} ms")
+            elif key_code in CLOSED_BRACKETS:
+                speed += 100
+                print(f"Speed increased to {speed} ms")
             elif key_ascii == 27:  # ESC key
                 early_exit = True
                 save_progress(save_path, frame_ranges, validated_ranges, current_range_index)
